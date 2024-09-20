@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: Geist;
+    src: url(/fonts/Geist-Regular.otf);
+}
+
+@font-face {
+    font-family: Geist Bold;
+    src: url(/fonts/Geist-Bold.otf);
+}
+
+:root{
+    font-family:Geist;
+    background-color: #100821;
+}
+
+.GB{
+    font-family:Geist Bold;
+}
+
+::-webkit-scrollbar {
+    width: 0px;
+}
+  
+  /* Track */
+::-webkit-scrollbar-track {
+    background: black; 
+}
+   
+  /* Handle */
+::-webkit-scrollbar-thumb {
+    background: #c4b5fd; 
+}
+  
+  /* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: gray; 
+}
