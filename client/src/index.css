@@ -39,3 +39,115 @@
 ::-webkit-scrollbar-thumb:hover {
     background: gray; 
 }
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+#phoneTable::-webkit-scrollbar {
+  width: 12px; /* Width of the scrollbar */
+}
+
+#phoneTable::-webkit-scrollbar-track {
+  background: #3b3b3b; /* Background of the scrollbar track */
+  border-radius: 6px; /* Round the corners of the track */
+}
+
+#phoneTable::-webkit-scrollbar-thumb {
+  background: #5c2ca6; /* Color of the scrollbar handle */
+  border-radius: 6px; /* Round the corners of the handle */
+}
+
+#phoneTable::-webkit-scrollbar-thumb:hover {
+  background: #4a1c82; /* Color on hover */
+}
+
+/* For Firefox */
+#phoneTable {
+  scrollbar-width: thin; /* "auto" or "thin" */
+  scrollbar-color: #5c2ca6 #3b3b3b; /* Handle color and track color */
+}
+
+
+
+@layer base {
+  :root {
+    --rainbow-gradient: rgba(252, 214, 255, 0.7),hsla(191, 100%, 58%, 0.7),hsla(59, 100%, 75%, 0.7),hsla(336, 87%, 79%, 0.7);
+
+    --purple-gradient: hsl(0, 0%, 0%), hsl(262, 67%, 15%) 34%, hsl(262, 66%, 38%) 65%, hsl(270, 60%, 65%) 82%
+  }
+}
+
+@layer base {
+  html {
+    @apply font-dmSans;
+  }
+
+  .gradient-primary {
+    --tw-gradient-stops: var(--rainbow-gradient)
+  }
+
+  .gradient-secondary {
+    --tw-gradient-stops: var(--purple-gradient);
+  }
+
+  .bg-hero {
+    @apply bg-[linear-gradient(to_bottom,)];
+    --tw-gradient-stops: #000, #200D42_34%, #4F21A1_65%, #A46EDB_82%;
+  }
+}
+
+
+.outputArea::after{
+  content: "V";
+  position: relative;
+  margin-top: -10vh;
+  left: 50vw;
+  height: 15vh;
+  width: 15vw;
+  background-color: red;
+  border: 2px solid red;
+}
+
+
+.HeartAnimation {
+  padding-top: 2em;
+  background-image: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/66955/web_heart_animation.png');
+	background-repeat: no-repeat;
+	background-size: 2900%;
+  background-position: left;
+	height: 50px;
+	width: 50px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+.animate {
+  animation: heart-burst .8s steps(28) forwards;
+}
+
+@keyframes heart-burst {
+	0% {
+		background-position: left
+	}
+	100% {
+		background-position: right
+	}
+}
+
+
+/* .testhai::after{
+  content: "CODEBATTLE";
+  position: absolute;
+  inset: 0 0 0 0;
+  z-index: 1000;
+  -webkit-text-stroke: 2px rgba(255, 255, 255, .5);
+  color: transparent;
+} */

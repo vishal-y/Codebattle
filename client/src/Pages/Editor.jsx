@@ -1,58 +1,134 @@
 import { useEffect, useRef, useState } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { PanelGroup } from "react-resizable-panels";
 import ProblemSet from "../utils/ProblemSet";
-import { FaArrowLeftLong, FaPlay } from "react-icons/fa6";
-import toast from "react-hot-toast";
-import Chip from "../components/Chip";
+import { FaArrowLeftLong } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
-import { DiCodeigniter } from "react-icons/di";
 import { initSocket } from "../socket";
 import { useAtom } from "jotai";
 import { allMainCode } from "../App";
-import Programmers from "../RoomComponents/Programmers";
-import Chat from "../RoomComponents/Chat";
-// import EditorWrap from "../RoomComponents/EditorWrap";
-import MainEditor from "../components/MainEditor";
-import ShareEditor from "../components/ShareEditor";
-import { TiDeleteOutline } from "react-icons/ti";
-import HomeEditor from "../components/HomeEditor";
 import axios from "axios";
+import toast from "react-hot-toast";
+import Left from "../RoomComponents/pc/Left";
+import Center from "../RoomComponents/pc/center";
+import Right from "../RoomComponents/pc/Right";
+import PhoneProblemScreen from "../RoomComponents/phone/phoneProblemScreen";
+import PhoneCodeScreen from "../RoomComponents/phone/PhoneCodeScreen";
+import PhoneRoomScreen from "../RoomComponents/phone/PhoneRoomScreen";
+import calculateTimeDifference from "../lib/timeDifference";
 
 export default function Editor() {
+  
   const navigator = useNavigate();
 
-  const [mainCode, setMainCode] = useAtom(allMainCode);
+  if (!localStorage.getItem("userInfo")) {
+    navigator("/auth");
+  }
 
-  const [admin, setAdmin] = useState("");
-  const [ready, setReady] = useState(false);
   const [roomId, setRoomId] = useState("");
+  const [roomData, setRoomData] = useState();
+  const [isRoom, setIsRoom] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [mainCode, setMainCode] = useAtom(allMainCode);
+  const [outputLoading, setOutputLoading] = useState(false);
+  const [phoneProb, setphoneProb] = useState("problem");
+  const [admin, setAdmin] = useState("");
   const [message, setMessage] = useState("");
-  const [question, setQuestion] = useState("");
-  const [questionDiff, setQuestionDiff] = useState("");
-  const [questionDesc, setQuestionDesc] = useState("");
-  const [templatecpp, setTemplatecpp] = useState("");
-  const [templatejava, setTemplatejava] = useState("");
-  const [solutioncpp, setsolutioncpp] = useState("");
-  const [solutionjava, setsolutionjava] = useState("");
   const [language, setLanguage] = useState("cpp");
   const [clients, setClients] = useState([]);
+  const [chats, setChats] = useState([]);
   const [output, setOutput] = useState("");
-  const [show, setshow] = useState(false);
+  const [show, setShow] = useState(false);
   const [sharedCode, setSharedCode] = useState("");
-  // const [questionApproach , setQuestionApproach] = useState("")
-  const [questionInfo, setQuestionInfo] = useState({
+  const [questionData, setQuestionData] = useState({
+    question: "",
+    difficulty: "",
+    description: "",
+    templatecpp: "",
+    templatejava: "",
+    solutioncpp: "",
+    solutionjava: "",
+    testCases: [],
     tags: "",
     expectedValue: "",
     timeComplexity: "",
     spaceComplexity: "",
   });
 
-  if (!localStorage.getItem("token") && !localStorage.getItem("userInfo")) {
-    navigator("/auth");
-  }
+
+  const fetchRoomData = async (rID) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/rooms/${rID}`);
+      let data = response.data
+      setRoomData(data); 
+    } catch (err) {
+      console.warn(err.response?.data?.return);
+      toast.error("Invalid roomID !", {
+        style: { background: "#1e293b", color: "white" },
+      });
+      navigator("/");
+    }
+  };
+
+  useEffect(() => {
+    if (roomData) {
+      console.log("Room Data Updated");
+    }
+  }, [roomData]);
+
+  useEffect(() => {
+    const url = window.location.href.split("/");
+    if (url[3] === "problems") {
+      setIsRoom(false);
+      setReady(true);
+    } else {
+      const id = window.location.href.split("/");
+      setRoomId(id[4])
+      fetchRoomData(id[4])
+      setIsRoom(true);
+      let url = window.location.href;
+      const now = new Date();
+      const currentTime = now.toLocaleTimeString();
+      let check = sessionStorage.getItem("StartedTime")
+        ? sessionStorage.getItem("StartedTime")
+        : null;
+      let checkSplit = check?.split(",");
+      let checkURL = checkSplit ? checkSplit[0] : null;
+      let checkTime = checkSplit ? checkSplit[1] : null;
+      if (checkURL == url) {
+        const difference = calculateTimeDifference(
+          checkTime.slice(0, 8),
+          currentTime.slice(0, 8)
+        );
+        // Calculate total elapsed time in seconds
+        const totalElapsedSeconds =
+          difference.hours * 3600 +
+          difference.minutes * 60 +
+          difference.seconds;
+
+        // Retrieve time per question from session storage and convert to seconds
+        let timePERQ = parseInt(sessionStorage.getItem("timePQ")) || 0; // Ensure it's a number
+        let totalQuestionTimeInSeconds = timePERQ * 60; // Convert to seconds
+        let remainingTime =
+          (totalQuestionTimeInSeconds - totalElapsedSeconds) / 60;
+
+        if (remainingTime > 0 && remainingTime < 11) {
+          countdown(remainingTime);
+          setReady(true);
+        } else {
+          setReady(false);
+        }
+      } else {
+        setReady(false);
+      }
+    }
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "scroll";
+    };
+  }, []);
 
   const userJson = JSON.parse(localStorage.getItem("userInfo"));
-  const clientUsername = userJson.username;
+  const clientUsername = userJson == null ? navigator("/auth") : userJson.username;
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -66,47 +142,51 @@ export default function Editor() {
       );
 
       if (clientUsername) {
+        let url = window.location.href.split("/");
+        let rID = url[4];
         socketRef.current.emit("join", {
-          roomId,
+          roomId: rID,
           username: clientUsername,
         });
       }
 
-      socketRef.current.on("joined", ({ admin, clients, username }) => {
-        const admin_function = () => {
-          setAdmin(admin);
-        };
-        admin_function();
-        setClients(clients);
-        let popup = `<div class="flex justify-between items-center bg-transparent border border-green-500 text-green-500 rounded-xl my-2 py-1">
+      socketRef.current.on(
+        "joined",
+        ({ admin, clients, username, roomInfo }) => {
+          const admin_function = () => {
+            setAdmin(admin);
+          };
+          admin_function();
+          setClients(clients);
+          let popup = `<div class="flex justify-between items-center bg-transparent border border-green-500 text-green-500 rounded-xl my-2 py-1">
         <p class="ml-4 capitalize"> ${username == clientUsername ? "You have" : username + " has "}  joined the room </p>
         <p class="text-xm mr-4">${time()}</p>
       </div>`;
-        document.getElementById("chat").innerHTML += popup;
-      });
+          document.getElementById("chat").innerHTML += popup;
+        }
+      );
 
       socketRef.current.on("codechange", ({ e }) => {
         language == "cpp" ? setMainCode(e) : setMainCode(e);
       });
 
       socketRef.current.on("all-message", ({ username, message, time }) => {
-        let side =
-          username == clientUsername
-            ? "justify-end"
-            : "justify-start";
-        let popup = `<div class="h-fit p-2 flex ${side} ">
-        <div class="bg-slate-800 w-fit px-3 p-1 rounded-2xl flex flex-col gap-2">
-        <div class="text-xs capitalize flex justify-between gap-2 items-center text-violet-500"> <p>${username}</p> <p>${time}</p> </div>
-        <p>${message}</p>
-        </div>
-      </div>`;
-        let chatEle = document.getElementById("chat");
-        chatEle.innerHTML += popup;
+        setChats((chats) => [...chats, { username, message, time }]);
+      });
+
+      socketRef.current.on("aloneWinner", ({ username }) => {
+        let popup = `<div class="flex justify-between items-center bg-transparent border border-green-400 text-green-600 bg-green-200 rounded-xl my-2 py-1">
+    <p class="ml-4">There is no one left in this room </br> <span class="font-bold capitalize"> ${username} </span> is the Winner </p>
+  </div>`;
+        document.getElementById("chat").innerHTML += popup;
+        alert(
+          `Congratulations ${username}, you are the last person in the room and the winner!`
+        );
       });
 
       socketRef.current.on("send-code", ({ code }) => {
         setSharedCode(code);
-        setshow(true);
+        setShow(true);
       });
 
       socketRef.current.on("player-start", ({ name }) => {
@@ -117,7 +197,7 @@ export default function Editor() {
         document.getElementById("chat").innerHTML += popup;
       });
 
-      socketRef.current.on("player-start", ({ start }) => {
+      socketRef.current.on("players-start", ({ start }) => {
         if (start) {
           let popup = `<div class="flex justify-between items-center bg-transparent border border-cyan-400 text-cyan-400 rounded-xl my-2 py-1">
     <p class="ml-4 text-center">Good luck. Battle has been started. 🧑‍💻</p>
@@ -125,7 +205,13 @@ export default function Editor() {
   </div>`;
           document.getElementById("chat").innerHTML += popup;
           setReady(true);
-          const timerId = countdown(2);
+          let timePQ = roomData.timePerQuestion;
+          const timerId = countdown(timePQ);
+          let url = window.location.href;
+          const now = new Date();
+          const currentTime = now.toLocaleTimeString();
+          sessionStorage.setItem("StartedTime", [url, currentTime]);
+          sessionStorage.setItem("timePQ", timePQ);
           return () => clearInterval(timerId);
         }
       });
@@ -143,8 +229,11 @@ export default function Editor() {
     };
 
     init();
-
   }, []);
+
+  useEffect(() => {
+    console.log("chats");
+  }, [chats]);
 
   let url = window.location.href.split("/");
   let num = parseInt(url[url.length - 1].split("%20").join(" "));
@@ -152,60 +241,39 @@ export default function Editor() {
     num = 1;
   }
 
+  
   useEffect(() => {
-    setRoomId(url[url.length - 2].split("%20").join(" "));
-
-    setClients([...clients, { socketId: 3, username: clientUsername }]);
-
-    setQuestion(ProblemSet[num - 1].problem);
-    setQuestionDiff(ProblemSet[num - 1].difficulty);
-    setQuestionDesc(ProblemSet[num - 1].description);
-    setTemplatecpp(ProblemSet[num - 1].template.cpp);
-    setTemplatejava(ProblemSet[num - 1].template.java);
-    setsolutioncpp(ProblemSet[num - 1].solution.cpp);
-    setsolutionjava(ProblemSet[num - 1].solution.java);
-
-    ProblemSet[num - 1].demo.forEach((i) => {
-      document.getElementById("testCase").innerHTML +=
-        `<li class="py-2 flex flex-col"> <span>${i.input}</span> ouput : ${i.output}</li>`;
-    });
-
-    setQuestionInfo({
-      tags: ProblemSet[num - 1].tags,
-      expectedValue: ProblemSet[num - 1].expectedValue,
-      timeComplexity: ProblemSet[num - 1].timeComplexity,
-      spaceComplexity: ProblemSet[num - 1].spaceComplexity,
+    let num = parseInt(url[url.length - 1].split("%20").join(" "));
+    if (num > 10) {
+      num = 1;
+    }
+    const problem = ProblemSet[num - 1];
+    setQuestionData({
+      question: problem.problem,
+      difficulty: problem.difficulty,
+      description: problem.description,
+      templatecpp: problem.template.cpp,
+      templatejava: problem.template.java,
+      solutioncpp: problem.solution.cpp,
+      solutionjava: problem.solution.java,
+      testCases: problem.demo.map((i) => ({
+        input: i.input,
+        output: i.output,
+      })),
+      tags: problem.tags,
+      expectedValue: problem.expectedValue,
+      timeComplexity: problem.timeComplexity,
+      spaceComplexity: problem.spaceComplexity,
     });
   }, []);
 
-  const tabs = ["Description", "Code"];
+  const tabs = ["Description"];
   const [selected, setSelected] = useState(tabs[0]);
 
-  const handleBack = () => {
-    toast(
-      (t) => (
-        <span className="">
-          Are you sure ?
-          <button
-            className="bg-[#b5a3fc] p-2 ml-2 text-black rounded-md"
-            onClick={() => {
-              toast.dismiss(t.id);
-              window.history.back();
-            }}
-          >
-            Go back
-          </button>
-        </span>
-      ),
-      {
-        style: {
-          borderRadius: "10px",
-          background: "#333",
-          color: "#fff",
-        },
-      }
-    );
-  };
+  useEffect(() => {
+    let rID = window.location.href.split("/");
+    localStorage.getItem("playerReady") == rID[4] ? setReady(true) : console.log("roomId", rID[4]);
+  },[]);
 
   const time = () => {
     let currentDate = new Date();
@@ -240,7 +308,6 @@ export default function Editor() {
           localStorage.setItem("Round", 1);
         }
         navigator(`/codebattle/${roomId[roomId.length - 2]}/${num + 1}`);
-        window.location.reload();
       }
 
       countTimeLeft--;
@@ -249,10 +316,19 @@ export default function Editor() {
     return timer;
   }
 
+  let triedReady = false;
   const handleReady = () => {
     let name = clientUsername;
-    socketRef.current.emit("player-ready", { name });
-    document.getElementById("readyButton").innerHTML = "Waiting for others...";
+    const url = window.location.href.split("/");
+    let roomId = url[4];
+    if (!triedReady) {
+      socketRef.current.emit("player-ready", { name, roomId });
+      triedReady = true;
+    }
+    const readyButton = document.getElementById("readyButton");
+    readyButton.style.cursor = "not-allowed";
+    readyButton.removeEventListener("click", handleReady);
+    readyButton.innerHTML = "Waiting for others...";
   };
 
   const handleVallanguage = (lang) => {
@@ -261,11 +337,8 @@ export default function Editor() {
   };
 
   const RunCode = async () => {
+    setOutputLoading(true);
     let code = localStorage.getItem("code");
-
-    // let convertedCode = code.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-    // console.log("convertedCode\n" , code , "\n pre written" ,  "#include <bits/stdc++.h>;\nusing namespace std;\n\nint main() {\n        \n    cout<<\"this\";\n        \n    return 0;\n}\n        ")
-
     const extensions = { cpp: "cpp", python: "py", c: "c", javascript: "js" };
     const extension_name = extensions[language];
 
@@ -291,237 +364,205 @@ export default function Editor() {
 
     try {
       const response = await axios.request(options);
-      console.log(response.data.stdout);
+      if (response.data.stdout == null) {
+        setOutput("{}");
+        setOutputLoading(false);
+        return;
+      }
+
       if (response.data.stdout) {
         setOutput(response.data.stdout);
+        setOutputLoading(false);
+        return;
       } else {
         setOutput(response.data.stderr);
+        setOutputLoading(false);
+        return;
       }
     } catch (error) {
       console.error(error);
+      setOutput("something wrong :{}");
+      setOutputLoading(false);
+      return;
     }
-    
   };
 
+  const handleBack = () => {
+    const goBack = window.confirm("You want to go back?");
+    if (goBack) {
+      window.history.back();
+    }
+  };
+
+  const translateX = {
+    room: "translate-x-0",
+    problem: "translate-x-[100%]",
+    code: "translate-x-[200%]",
+  }[phoneProb];
+
+const [isCopied,setIsCopied] = useState(false)
+
   return (
-    <div className="bg-slate-800 overflow-hidden">
-      <PanelGroup direction="horizontal">
-        <div className="hidden h-full w-screen absolute justify-center items-center z-40 bg-black/[55%] ">
-          <div className="h-[25vh] w-[35vw] rounded-3xl bg-slate-900"></div>
-        </div>
-
-        <Panel
-          defaultSize={28}
-          minSize={26}
-          maxSize={31}
-          className="h-[98.9vh] min-h-[40rem] w-full  flex justify-between items-center flex-col border border-[#1f1f1f] text-white rounded-2xl bg-[#100821] ml-2 m-1 mr-0"
-        >
-          <div className="p-8 h-full min-h-[100%] ">
-            <div className="py-4 flex justify-start gap-6 items-center">
-              <div
-                onClick={handleBack}
-                className="h-8 w-8 cursor-pointer flex justify-center shadow-2xl items-center bg-violet-300 p-2 rounded-full"
-              >
-                <FaArrowLeftLong style={{ color: "black" }} size={15}>
-                  BACK
-                </FaArrowLeftLong>
-              </div>
-
-              <ul className="flex gap-4">
-                {tabs.map((tab) => (
-                  <Chip
-                    text={tab}
-                    selected={selected === tab}
-                    setSelected={setSelected}
-                    key={tab}
-                  />
-                ))}
-              </ul>
-            </div>
-
-            <div id="desc" className="h-full  max-h-[90%] overflow-y-scroll">
-              <span className="text-white text-xl mt-2 flex justify-start items-center gap-2 mb-4">
-                {num}. {question}
-                <span
-                  className={
-                    questionDiff !== "Hard"
-                      ? questionDiff === "Easy"
-                        ? " text-green-500 text-sm p-1 bg-slate-800 rounded-md"
-                        : "text-yellow-500 text-sm p-1 bg-slate-800 rounded-md"
-                      : "text-red-500 text-sm p-1 bg-slate-800 rounded-md"
-                  }
-                >
-                  {questionDiff}
-                </span>
-              </span>
-              <p className="mt-5">{questionDesc}</p>
-              <div className="mt-6">
-                Expected Value :{" "}
-                <div className=" bg-slate-800 rounded-xl my-1 mt-2 p-2">
-                  {questionInfo.expectedValue}
-                </div>
-              </div>
-
-              <div className="mt-3 mb-1 flex items-center justify-start">
-                Expected Time complexity :{" "}
-                <div className="p-2 bg-slate-800 rounded-xl my-2 ml-2">
-                  {questionInfo.timeComplexity}
-                </div>
-              </div>
-
-              <div className="mt-1 mb-3 flex items-center justify-start">
-                Expected Expected Space complexity :{" "}
-                <div className="p-2 bg-slate-800 rounded-xl my-2 ml-2">
-                  {questionInfo.spaceComplexity}
-                </div>
-              </div>
-              <p>Test cases : </p>
-
-              <div
-                id="testCase"
-                className="p-2 bg-slate-800 rounded-xl my-2 overflow-y-scroll"
-              ></div>
-            </div>
-
-            <div className="hidden w-[20rem] border max-w-[20rem]" id="sol">
-              {/* <pre>{questionApproach}</pre> */}
-            </div>
-
-            <div className="hidden" id="sub">
-              <div className=" box-inset border border-[#685a96] rounded-md">
-                <HomeEditor
-                  code={language == "cpp" ? solutioncpp : solutionjava}
-                  doAnimate={false}
-                />
-              </div>
-            </div>
-          </div>
-        </Panel>
-        <PanelResizeHandle />
-
-        <Panel className="mr-1">
-          <PanelGroup direction="vertical">
-            <Panel className="h-full p-4 text-white rounded-2xl bg-[#100821] m-1 mr-0">
-              <div className=" w-full h-[8%] pb-4 flex justify-between items-center px-1">
-                <select
-                  id="language"
-                  onChange={(e) => {
-                    setLanguage(e.target.value);
-                  }}
-                  className="bg-transparent border text-purple-500 p-1 hover:bg-transparent text-sm rounded-lg"
-                >
-                  <option value="cpp">CPP</option>
-                  <option value="c">C</option>
-                  <option value="java">JAVA</option>
-                  <option value="python">PYTHON</option>
-                  <option value="javascript">JAVASCRIPT</option>
-                  <option value="csharp">C#</option>
-                  <option value="rust">RUST</option>
-                  <option value="go">GO</option>
-                </select>
-
-                <div>
-                  {!ready ? (
-                    <button
-                      onClick={handleReady}
-                      id="readyButton"
-                      className="bg-[#b5a3fc] px-2 py-1 rounded-md text-black text-base w-fit cursor-pointer transition-all ease-linear duration-75 hover:scale-[1.05]"
-                    >
-                      Click here to start
-                    </button>
-                  ) : (
-                    <div className="text-sm bg-[#c4b5fd] text-black text-center p-1 rounded-md shadow-2xl px-3 flex gap-1">
-                      Round ends in <p id="timeleft"></p>{" "}
-                    </div>
-                  )}
-                </div>
-
-                <span className="flex gap-2">
-                  <DiCodeigniter size={25} className="hover:text-amber-500" />
-                </span>
-              </div>
-
-              <div className="h-[90%]">
-                {show ? (
-                  <div className="h-full">
-                    <div className="bg-violet-300 text-black font-medium capitalize px-1 py-1 rounded-md mb-2 flex justify-between items-center">
-                      <span id="whoscode">
-                        You are currenty looking at code
-                      </span>
-                      <TiDeleteOutline
-                        size={23}
-                        onClick={() => {
-                          setshow(false);
-                        }}
-                      />{" "}
-                    </div>
-                    <ShareEditor code={sharedCode} />
-                  </div>
-                ) : (
-                  <div className="h-full">
-                    <MainEditor
-                      socketRef={socketRef}
-                      roomId={roomId}
-                      user={clientUsername}
-                      val={
-                        language == "cpp"
-                          ? handleVallanguage(templatecpp)
-                          : handleVallanguage(templatejava)
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* <EditorWrap show={show} setshow={setshow} sharedCode={sharedCode} language={language} solutioncpp={solutioncpp} solutionjava={solutionjava} mainCode={mainCode} setMainCode={setMainCode} roomId={roomId} socketRef={socketRef} clientUsername={clientUsername} /> */}
-            </Panel>
-            <PanelResizeHandle />
-
-            <Panel defaultSize={10} maxSize={35} minSize={10}>
-              <PanelGroup direction="horizontal">
-                <Panel className="border border-[#1f1f1f] p-4 text-white rounded-2xl bg-[#100821] m-1 mt-0 mr-0">
-                  <div className="flex justify-between items-center">
-                    <p>OUTPUT : {output} </p>
-                    <FaPlay
-                      size={25}
-                      onClick={RunCode}
-                      className="hover:text-violet-300"
-                    />
-                  </div>
-                </Panel>
-                <PanelResizeHandle />
-              </PanelGroup>
-            </Panel>
-          </PanelGroup>
-        </Panel>
-        <PanelResizeHandle />
-
-        <Panel
-          defaultSize={23}
-          minSize={23}
-          maxSize={30}
-          className="h-[98.9vh] min-h-[40rem] mr-2 mt-1 border border-[#1f1f1f] text-white rounded-2xl bg-[#100821] "
-        >
-          <div className="h-full">
-            <Programmers
+    <>
+      <div className="bg-slate-800 hidden lg:block overflow-hidden">
+        <PanelGroup direction="horizontal">
+          <Left AboutProblem={questionData} num={num} handleBack={handleBack} />
+          <Center
+            roomId={roomId}
+            clientUsername={clientUsername}
+            socketRef={socketRef}
+            questionData={questionData}
+            output={output}
+            outputLoading={outputLoading}
+            sharedCode={sharedCode}
+            isRoom={isRoom}
+            ready={ready}
+            setLanguage={setLanguage}
+            handleReady={handleReady}
+            RunCode={RunCode}
+            show={show}
+            setShow={setShow}
+            language={language}
+            handleVallanguage={handleVallanguage}
+          />
+          {isRoom ? (
+            <Right
               clients={clients}
               roomId={roomId}
               admin={admin}
               socketRef={socketRef}
               clientUsername={clientUsername}
-            />
-
-            <Chat
               message={message}
               setMessage={setMessage}
-              roomId={roomId}
-              socketRef={socketRef}
-              clientUsername={clientUsername}
+              chats={chats}
+              isCopied={isCopied}
             />
+          ) : null}
+        </PanelGroup>
+      </div>
+
+      <div className="lg:hidden h-[100vh]">
+      
+        {isRoom ? (
+          <div className="flex justify-evenly gap-3 items-center w-full">
+            <div className="h-8 w-8 ml-4 cursor-pointer z-50 flex justify-center shadow-2xl items-center bg-[#5d2ca8] p-2 rounded-full">
+              <FaArrowLeftLong
+                onClick={handleBack}
+                style={{ color: "black" }}
+                size={15}
+              />
+            </div>
+
+            <div className="flex justify-center w-full mx-5 m-auto mt-1 mb-2">
+              <div className="relative flex w-full p-1 bg-[#334155] rounded-full">
+                <span
+                  className="absolute inset-0 m-1 pointer-events-none"
+                  aria-hidden="true"
+                >
+                  <span
+                    className={`absolute inset-0 w-1/3 bg-[#5D2CA8] rounded-full shadow-sm shadow-[#5D2CA8] transform transition-transform duration-150 ease-in-out ${translateX}`}
+                  ></span>
+                </span>
+                {["room", "problem", "code"].map((option) => (
+                  <button
+                    key={option}
+                    className={`relative flex-1 text-sm font-medium h-6 rounded-full focus-visible:outline-none focus-visible:ring focus-visible:ring-slate-600 transition-colors duration-150 ease-in-out ${phoneProb === option ? "text-white" : "text-white/70"}`}
+                    onClick={() => setphoneProb(option)}
+                    aria-pressed={phoneProb === option}
+                  >
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </Panel>
-        <PanelResizeHandle />
-      </PanelGroup>
-    </div>
+        ) : (
+          <div className="flex flex-[2] mt-2">
+            <div className="h-8 w-8 ml-4 cursor-pointer z-50 flex justify-center shadow-2xl items-center bg-[#5d2ca8] p-2 rounded-full">
+              <FaArrowLeftLong
+                onClick={handleBack}
+                style={{ color: "black" }}
+                size={15}
+              />
+            </div>
+
+            <div className="flex w-[80vw] justify-center max-w-[14rem] m-auto mb-3">
+              <div className="relative flex w-full p-1 bg-[#334155] rounded-full">
+                <span
+                  className="absolute inset-0 m-1 pointer-events-none"
+                  aria-hidden="true"
+                >
+                  <span
+                    className={`absolute inset-0 w-1/2 bg-[#5D2CA8] rounded-full shadow-sm shadow-[#5D2CA8] transform transition-transform duration-150 ease-in-out ${phoneProb == "problem" ? "translate-x-0" : "translate-x-full"}`}
+                  ></span>
+                </span>
+                <button
+                  className={`relative flex-1 text-sm font-medium h-8 rounded-full focus-visible:outline-none focus-visible:ring focus-visible:ring-slate-600 transition-colors duration-150 ease-in-out ${phoneProb ? "text-white/70" : " text-white"}`}
+                  onClick={() => setphoneProb("problem")}
+                  aria-pressed={phoneProb}
+                >
+                  Problem
+                </button>
+                <button
+                  className={`relative flex-1 text-sm font-medium h-8 rounded-full focus-visible:outline-none focus-visible:ring focus-visible:ring-slate-600 transition-colors duration-150 ease-in-out ${phoneProb ? "text-white/70" : " text-white"}`}
+                  onClick={() => setphoneProb("code")}
+                  aria-pressed={phoneProb}
+                >
+                  Code
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {phoneProb == "problem" ? (
+          <PhoneProblemScreen
+            tabs={tabs}
+            selected={selected}
+            setSelected={setSelected}
+            questionData={questionData}
+            num={num}
+          />
+        ) : null} 
+
+        {phoneProb == "code" ? (
+          <>
+            <PhoneCodeScreen
+              language={language}
+              setLanguage={setLanguage}
+              ready={ready}
+              setReady={setReady}
+              show={show}
+              setShow={setShow}
+              sharedCode={sharedCode}
+              setSharedCode={setSharedCode}
+              output={output}
+              setOutput={setOutput}
+              outputLoading={outputLoading}
+              RunCode={RunCode}
+              socketRef={socketRef}
+              roomId={roomId}
+              clientUsername={clientUsername}
+              questionData={questionData}
+              handleVallanguage={handleVallanguage}
+            />
+          </>
+        ) : null}
+
+        {phoneProb == "room" ? (
+          <PhoneRoomScreen
+            clients={clients}
+            roomId={roomId}
+            admin={admin}
+            clientUsername={clientUsername}
+            socketRef={socketRef}
+            message={message}
+            setMessage={setMessage}
+            chats={chats}
+          />
+        ) : null}
+
+      </div>
+    </>
   );
 }

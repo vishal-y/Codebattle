@@ -1,5 +1,6 @@
 const ProblemSet = [
   {
+    problemID : 1,
     problem: "TwoSum",
     description:
       "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
@@ -90,6 +91,7 @@ public class DSAExample {
   },
 
   {
+    problemID : 2,
     problem: "Add Two Numbers",
     description:
       "You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit.",
@@ -200,11 +202,12 @@ public class DSAExample {
   },
 
   {
+    problemID : 3,
     problem: "Longest Substring Without Repeating Characters",
     description:
       "Given a string s, find the length of the longest substring without repeating characters.",
     difficulty: "Medium",
-    tags: ["String", "Sliding Window"],
+    tags: ["Hash Table","String"],
     constraints: {
       c1: "Input Input : ring (0 <= s.length <= 5 * 10^4)",
     },
@@ -294,11 +297,12 @@ public class DSAExample {
   },
 
   {
+    problemID : 4,
     problem: "Median Of Two Sorted Arrays",
     description:
       "There are two sorted arrays nums1 and nums2 of size m and n respectively. Find the median of the two sorted arrays.",
     difficulty: "Hard",
-    tags: ["Array", "Binary Search", "Divide and Conquer"],
+    tags: ["Array", "Binary Search"],
     constraints: {
       c1: "Sorted array (0 <= nums1.length <= 1000)",
       c2: "Sorted array (0 <= nums2.length <= 1000)",
@@ -425,11 +429,12 @@ public class DSAExample {
   },
 
   {
+    problemID : 5,
     problem: "Longest Palindromic Substring",
     description:
       "Given a string s, return the longest palindromic substring in s.",
     difficulty: "Medium",
-    tags: ["String", "Dynamic Programming"],
+    tags: ["String", "DynamicProgramming"],
     constraints: {
       c1: "Input Input : ring (1 <= s.length <= 1000)",
     },
@@ -536,6 +541,7 @@ public class DSAExample {
   },
 
   {
+    problemID : 6 ,
     problem: "ZigZag Conversion",
     description:
       "The string 'PAYPALISHIRING' is written in a zigzag pattern on a given number of rows like this.",
@@ -647,6 +653,7 @@ public class DSAExample {
   },
 
   {
+    problemID : 7,
     problem: "Reverse Integer",
     description:
       "Given a signed 32-bit integer x, return x with its digits reversed.",
@@ -731,6 +738,7 @@ public class DSAExample {
   },
 
   {
+    problemID : 8,
     problem: "String To Integer (atoi)",
     description:
       "Implement the myAtoi(string s) function, which converts a string to a 32-bit signed integer.",
@@ -841,11 +849,12 @@ public class DSAExample {
   },
 
   {
+    problemID : 9,
     problem: "Regular Expression Matching",
     description:
       "Implement regular expression matching with support for '.' and '*'.",
     difficulty: "Hard",
-    tags: ["String", "Dynamic Programming", "Backtracking"],
+    tags: ["String", "Backtracking"],
     constraints: {
       c1: "Input Input : ring (0 <= s.length <= 20)",
       c2: "Input Input : ttern (0 <= p.length <= 30)",

@@ -1,9 +1,5 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import Home from "./Pages/Home";
-import Login from "./Pages/Login";
-import Signup from "./Pages/Signup";
-import Problem from "./Pages/Problems";
-// import RoomForm from './components/RoomForm'
+import MainHome from './Homepage/MainHome'
 import Editor from "./Pages/Editor";
 import Navbar from './components/Navbar'
 import { Toaster } from "react-hot-toast";
@@ -11,28 +7,49 @@ import { atom } from 'jotai'
 import Auth from "./Pages/Auth";
 import Test from "./Pages/Test";
 import Problems from "./Pages/Problems";
+import About from "./Pages/About";
+import { getUserData } from "../src/utils/getUserData";
 
-// Define your atoms
 export const allMainCode = atom("");
 export const mainDP = atom("");
 
-// Create a component to conditionally render the Navbar
+const fetchData = async (username) => {
+  try {
+    const data = await getUserData(username);
+    const userData = {
+      name: data.name,
+      username: data.username,
+      email: data.email,
+      about: data.about,
+      DP: data.DP,
+    };
+    localStorage.setItem("userDetail", JSON.stringify(userData));
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+  }
+};
+
 const AppContent = () => {
   const location = useLocation();
   const shouldHideNavbar = location.pathname === "/auth" || location.pathname.includes("codebattle");
+  const storedUserDetail = localStorage.getItem("userInfo") ? localStorage.getItem("userInfo") : false;
+  const userDetail = storedUserDetail ? JSON.parse(storedUserDetail) : false;
+  const username = userDetail.username;
+  if(username && !localStorage.getItem("userDetail")){
+    fetchData(username) 
+  } 
+
   return (
     <>
-      {/* Conditionally render Navbar based on the current route */}
       {!shouldHideNavbar && <Navbar />}
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<MainHome />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/about" element={<Problems />} />
-        {/* <Route path="/room" element={<RoomForm />} /> */}
-        <Route path="/codebattle2" element={<Problem />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/problems" element={<Problems />} />
+        <Route path="/problems/codebattle/:id" element={<Editor />} />
         <Route path="/codebattle/:codebattle/:id" element={<Editor />} />
+        <Route path="/invalidID" element={<Problems />} />
         <Route path="/*" element={<Test />} />
       </Routes>
     </>

@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 
 export default function Programmers({ clients , roomId , admin , socketRef , clientUsername }) {
 
+
     const handleScreenShare = (e) => {
         // let whoscode = e.currentTarget.textContent
         let whoscode = e.currentTarget.getAttribute("data-name");
@@ -10,10 +11,12 @@ export default function Programmers({ clients , roomId , admin , socketRef , cli
         }
       };
 
+      console.log(roomId)
+
   return (
-    <div className="p-4 h-[30%]">
-              <p>Programmers :</p>
-              <span className="grid md:grid-cols-3 lg:grid-cols-4 my-4">
+    <div className="px-2 pb-2 w-[96vw] border-b-2 mb-2 border-violet-600 overflow-x-scroll lg:w-auto lg:p-4 lg:pb-0 lg:pt-0 max-h-[80%] lg:max-h-[20%] lg:h-[20%]">
+              <p className='sticky top-0 bg-[#100821] h-[2rem] flex items-end'>Programmers :</p>
+              <span className="flex flex-wrap gap-2 mt-2">
                 {clients.map((data, id) => {
                   return (
                     <div
@@ -35,24 +38,12 @@ export default function Programmers({ clients , roomId , admin , socketRef , cli
                     </div>
                   );
                 })}
+
+            
+                
               </span>
 
-              <div className="cursor-pointer rounded-full text-center text-black bg-[#c4b5fd] p-3 flex justify-around items-center">
-               
-                <span>
-                  {Array.from(roomId).map((letter, index) => {
-                    return index < 15 ? letter : index > 18 ? null : ".";
-                  })}
-                </span>{" "}
-                
-                {/* <p className='text-xs'>{roomId}</p> */}
-
-                <div className='flex justify-center items-center gap-2 bg-slate-700 text-white px-4 py-1 rounded-2xl cursor-pointer hover:scale-110 transition-all ease-linear duration-75'>copy id</div>
-              
-              </div>
              
-
-              <hr className="border border-[#685a96] w-[100%] my-5 "></hr>
             </div>
   )
 }

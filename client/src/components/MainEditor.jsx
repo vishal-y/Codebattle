@@ -1,42 +1,49 @@
 import CodeMirror from '@uiw/react-codemirror';
 import { cppLanguage } from '@codemirror/lang-cpp';
 import { dracula } from '@uiw/codemirror-theme-dracula';
-import PropTypes from 'prop-types'
+import PropTypes from 'prop-types';
 
-function MainEditor({socketRef , roomId , user , val }) {
-
-  const handleChange = (e)=>{
-    socketRef.current.emit('codechange',{
-      user ,
+function MainEditor({ socketRef, roomId, user, val, isReady }) {
+  const handleChange = (e) => {
+    socketRef.current.emit('codechange', {
+      user,
       roomId,
-      e //e acts as a code value here
-    })
-    val = e
-    localStorage.setItem("code",val)
-    console.log("bhai code change toh ro raha hai")
-  }
+      e // e acts as a code value here
+    });
+    localStorage.setItem('code', e);
+  };
 
   window.addEventListener('beforeunload', () => {
     localStorage.removeItem('code');
   });
 
-  return (  
-    <CodeMirror
-    id='codeEdit'
-      value={val}
-      height='100%'
-      className='h-full text-base border border-[#685a96] rounded-lg'
-      theme={dracula}
-      extensions={[cppLanguage]}
-      onChange={handleChange}
-    />
+  return (
+    <div className="h-full">
+      {!isReady && (
+        <div className="text-red-500/70 mt-2">
+          You can't write code until everyone is ready :) 
+        </div>
+      )}
+      <CodeMirror
+        id="codeEdit"
+        value={val}
+        height="100%"
+        className={`h-full text-base border border-[#685a96] rounded-lg ${!isReady ? 'opacity-50' : ''}`}
+        theme={dracula}
+        extensions={[cppLanguage]}
+        onChange={isReady ? handleChange : null} // Only allow changes if ready
+        editable={isReady} // Disable editing if not ready
+      />
+    </div>
   );
 }
-export default MainEditor;
 
 MainEditor.propTypes = {
   socketRef: PropTypes.object.isRequired,
   roomId: PropTypes.string.isRequired,
   user: PropTypes.string.isRequired,
   val: PropTypes.string.isRequired,
+  isReady: PropTypes.bool.isRequired,
 };
+
+export default MainEditor;
